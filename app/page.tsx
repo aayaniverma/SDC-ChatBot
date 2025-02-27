@@ -30,12 +30,13 @@ export default function Home() {
   return (
     <div className="relative min-h-screen bg-image">
       <Image 
-        src="/images/bg.png" 
-        width={800} 
-        height={500} 
-        alt="Background Image"
-        className="absolute inset-0 w-full h-full object-cover -z-10"
+      src="/images/bg.png" 
+      width={1920} 
+      height={1080} 
+      alt="Background Image"
+      className="absolute inset-0 w-full h-full object-cover md:object-center"
       />
+
       {/* Main content */}
       <div className="max-w-7xl mx-auto p-8">
       </div>

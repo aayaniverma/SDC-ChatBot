@@ -1,100 +1,35 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import Image from "next/image";
 
 export default function WelcomeAnimation() {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    // Scene setup
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      containerRef.current.clientWidth / containerRef.current.clientHeight,
-      0.1,
-      1000
-    );
-    camera.position.z = 5;
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    containerRef.current.appendChild(renderer.domElement);
-
-    // Create a starfield
-    const starGeometry = new THREE.BufferGeometry();
-    const starCount = 500;
-    const starPositions = new Float32Array(starCount * 3);
-
-    for (let i = 0; i < starCount * 3; i++) {
-      starPositions[i] = (Math.random() - 0.5) * 10; // Spread stars randomly
-    }
-
-    starGeometry.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.02 });
-    const stars = new THREE.Points(starGeometry, starMaterial);
-    scene.add(stars);
-
-    // Lighting (subtle)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambientLight);
-
-    // Orbit Controls
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableZoom = false;
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.5;
-
-    // Animation loop
-    const animate = () => {
-      requestAnimationFrame(animate);
-      stars.rotation.y += 0.0008; // Slowly rotate stars
-      controls.update();
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    // Handle resizing
-    const handleResize = () => {
-      if (!containerRef.current) return;
-      const width = containerRef.current.clientWidth;
-      const height = containerRef.current.clientHeight;
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      containerRef.current?.removeChild(renderer.domElement);
-    };
-  }, []);
-
   return (
-    <div className="h-screen bg-black relative">
-      {/* Heading & Text */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 text-center">
-        <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mt-12 soft-glow-text">
+    <div className="h-screen flex flex-col items-center justify-center text-center px-4 bg-[#E67E22]">
+      {/* Circular Image - Moved Higher */}
+      <div className="w-44 h-44 md:w-52 md:h-52 lg:w-60 lg:h-60 rounded-full bg-white shadow-xl flex items-center justify-center mt-[-80px]">
+        <Image
+          src="\images\manipal-university-jaipur-featured.jpg" // Replace with actual image
+          width={300}
+          height={300}
+          alt="Chatbot Avatar"
+          className="w-36 h-36 md:w-44 md:h-44 lg:w-52 lg:h-52 rounded-full object-cover"
+        />
+      </div>
+
+      {/* Heading & Text - Moved Slightly Up */}
+      <div className="mt-4">
+        <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white soft-glow-text">
           Welcome to MUJ CSE Chatbot
         </h1>
-        <p className="text-gray-300 text-base md:text-lg mt-2">
+        <p className="text-white text-base md:text-lg mt-2">
           Your AI-powered assistant is here!
         </p>
       </div>
 
-      {/* 3D Starfield */}
-      <div ref={containerRef} className="absolute inset-0 z-0" />
-
-      {/* Subtle Glow Effect */}
+      {/* Soft Glow Effect for Text */}
       <style jsx>{`
         .soft-glow-text {
-          text-shadow: 0 0 5px #7d3cff, 0 0 10px rgba(125, 60, 255, 0.5);
+          text-shadow: 0 0 6px rgba(255, 140, 0, 0.5), 0 0 12px rgba(255, 100, 0, 0.3);
         }
       `}</style>
     </div>

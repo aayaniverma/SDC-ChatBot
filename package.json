@@ -71,6 +71,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/three": "^0.173.0"
+    "@types/three": "^0.173.0",
+    "three-stdlib": "^2.35.14"
   }
 }
