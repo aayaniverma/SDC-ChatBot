@@ -1,45 +1,62 @@
 "use client";
 
-import { useState } from 'react';
-import dynamic from 'next/dynamic';
-import { Bot, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { Bot, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
-const ChatWindow = dynamic(() => import('@/components/ChatWindow'), {
-  loading: () => <div>Loading...</div>
+const ChatWindow = dynamic(() => import("@/components/ChatWindow"), {
+  loading: () => <div>Loading...</div>,
 });
 
-const WelcomeAnimation = dynamic(() => import('@/components/WelcomeAnimation'), {
+const WelcomeAnimation = dynamic(() => import("@/components/WelcomeAnimation"), {
   ssr: false,
-  loading: () => <div>Loading...</div>
+  loading: () => <div>Loading...</div>,
 });
 
 export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [bgImage, setBgImage] = useState("/images/bg.png"); // Default to laptop image
+
+  useEffect(() => {
+    // Function to check screen width
+    const updateImage = () => {
+      if (window.innerWidth <= 768) {
+        setBgImage("/images/bgp.jpg"); // Set mobile image
+      } else {
+        setBgImage("/images/bg.png"); // Set laptop image
+      }
+    };
+
+    updateImage(); // Initial check
+    window.addEventListener("resize", updateImage); // Update on resize
+
+    return () => window.removeEventListener("resize", updateImage); // Cleanup
+  }, []);
 
   const handleChatOpen = () => {
     setIsChatOpen(true);
-    // Show welcome animation for 3 seconds
     setTimeout(() => {
       setShowWelcome(false);
     }, 3000);
   };
 
   return (
-    <div className="relative min-h-screen bg-image">
-      <Image 
-      src="/images/bg.png" 
-      width={1920} 
-      height={1080} 
-      alt="Background Image"
-      className="absolute inset-0 w-full h-full object-cover md:object-center"
-      />
+    <div className="relative min-h-screen">
+      {/* Background Image Container */}
+      <div className="absolute inset-0 w-screen h-screen overflow-hidden">
+        <Image
+          src={bgImage}
+          fill
+          alt="Background Image"
+          className="object-cover object-center"
+        />
+      </div>
 
       {/* Main content */}
-      <div className="max-w-7xl mx-auto p-8">
-      </div>
+      <div className="relative z-10 max-w-7xl mx-auto p-8"></div>
 
       {/* Chatbot */}
       <AnimatePresence>
@@ -62,11 +79,7 @@ export default function Home() {
                 <X className="h-6 w-6 text-gray-500 hover:text-gray-700" />
               </button>
 
-              {showWelcome ? (
-                <WelcomeAnimation />
-              ) : (
-                <ChatWindow />
-              )}
+              {showWelcome ? <WelcomeAnimation /> : <ChatWindow />}
             </motion.div>
           </motion.div>
         )}
