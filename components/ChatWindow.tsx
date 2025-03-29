@@ -119,7 +119,15 @@ export default function ChatWindow() {
           height={40}
           className="h-10 w-auto"
         />
-        <h1 className="text-xl font-semibold text-orange-600">MUJ CSE Assistant</h1>
+        <Image
+          src="\images\sdc.jpg"
+          alt="SDC Logo"
+          width={80} // Adjust this if needed
+          height={50}
+          className="w-[60px] sm:w-[80px] md:w-[100px] lg:w-[120px] h-[45px] sm:h-[50px] md:h-[55px] lg:h-[60px]"
+        />
+
+        <h1 className="text-xl antialiased font-semibold font-serif tracking-wide text-black-600">MUJ CSE ASSISTANT</h1>
       </div>
 
       {/* Quick Queries */}
