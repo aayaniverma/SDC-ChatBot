@@ -145,7 +145,7 @@ export default function ChatWindow() {
           className="h-8 w-auto sm:h-10 sm:w-auto md:h-12 md:w-auto lg:h-14 lg:w-auto"
         />
 
-        <h1 className="text-xl antialiased font-semibold font-serif tracking-wide text-black-600">MUJ CSE ASSISTANT</h1>
+        <h1 className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl antialiased font-semibold font-serif tracking-wide text-black-600">MUJ CSE ASSISTANT</h1>
       </div>
 
       {/* Quick Queries */}
