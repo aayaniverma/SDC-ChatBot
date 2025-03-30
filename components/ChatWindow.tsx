@@ -135,14 +135,14 @@ export default function ChatWindow() {
           alt="MUJ Logo"
           width={40}
           height={40}
-          className="h-10 w-auto"
+          className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14"
         />
         <Image
           src="\images\sdc-logo-black.webp"
           alt="SDC Logo"
           width={40} // Adjust this if needed
           height={40}
-          className="h-10 w-auto"
+          className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14"
         />
 
         <h1 className="text-xl antialiased font-semibold font-serif tracking-wide text-black-600">MUJ CSE ASSISTANT</h1>
