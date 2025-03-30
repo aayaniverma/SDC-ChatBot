@@ -38,24 +38,42 @@ export default function ChatWindow() {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-
+  
     const newMessage: Message = {
       id: Date.now().toString(),
       text: input,
       sender: 'user'
     };
-
+  
     setMessages(prev => [...prev, newMessage]);
     setInput('');
     setIsLoading(true);
-
-    // Simulate API response
+  
+    // Check if user input matches any predefined responses
+    const lowerInput = input.toLowerCase();
+    const tempResponses: Record<string, string> = {
+      "programs offer": "1. B. Tech (Computer Science & Engineering)\n 2. M. Tech (Computer Science & Engineering)",
+      "eligibility criteria for admission": "1. MET 2024 Rank Holders:\n The candidate must have passed 10+2 or A Level or IB or American 12th grade or equivalent examination with Physics, Mathematics and English as Compulsory subjects, along with any one of Chemistry or Computer Science or Biotechnology or Biology or Statistics or Engineering Drawing as optional subject for admission to B Tech, with minimum of 50% marks in Physics, Mathematics and the optional subject, put together.\n2. Direct admission:\nDirect admission is possible if seats are available after MET.\nCandidates need to meet one of the following criteria:\n-Candidates have a JEE rank and qualified for JEE Advanced in that year\n-Based on candidate's SAT score\n-MET 2024 rank holders, who could not come for counseling.\n-All Students with Physics, Mathematics and English as compulsory subjects and who have 60% or equivalent in PMX subjects in their 12th std. where X could be Chemistry, Computers Science, Biotechnology, Biology, Statistics or Engineering Drawing.",
+      "duration of m.tech": "The M.Tech program at MUJ has a duration of 2 years (4 semesters)."
+    };
+  
+    let botResponseText = "I'm not sure about that. Did you mean to ask about the admission process?";
+    let responseType: 'confirmation' | 'normal' = 'confirmation'; // Default to confirmation
+  
+    for (const key in tempResponses) {
+      if (lowerInput.includes(key)) {
+        botResponseText = tempResponses[key];
+        responseType = 'normal'; // Set as normal to avoid showing confirmation buttons
+        break;
+      }
+    }
+  
     setTimeout(() => {
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: "I'm not sure about that. Did you mean to ask about the admission process?",
+        text: botResponseText,
         sender: 'bot',
-        type: 'confirmation'
+        type: responseType
       };
       setMessages(prev => [...prev, botResponse]);
       setIsLoading(false);
@@ -120,11 +138,11 @@ export default function ChatWindow() {
           className="h-10 w-auto"
         />
         <Image
-          src="\images\sdc.jpg"
+          src="\images\sdc-logo-black.webp"
           alt="SDC Logo"
-          width={80} // Adjust this if needed
-          height={50}
-          className="w-[60px] sm:w-[80px] md:w-[100px] lg:w-[120px] h-[45px] sm:h-[50px] md:h-[55px] lg:h-[60px]"
+          width={40} // Adjust this if needed
+          height={40}
+          className="h-10 w-auto"
         />
 
         <h1 className="text-xl antialiased font-semibold font-serif tracking-wide text-black-600">MUJ CSE ASSISTANT</h1>
