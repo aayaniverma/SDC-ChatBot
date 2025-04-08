@@ -4,12 +4,51 @@ import { useState } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import * as XLSX from 'xlsx';
+
+// Add this function at the top of ChatWindow.tsx or import it from a utility file
+async function sendMessageToChatbot(userMessage: string) {
+  const response = await fetch("http://127.0.0.1:5001/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ message: userMessage }),
+  });
+
+  const data = await response.json();
+  return data;
+}
+
+async function sendFeedback(question: string, answer: string, feedbackType: string) {
+  try {
+    console.log('Sending feedback:', { question, answer, feedbackType }); // Debug log
+    const response = await fetch("http://127.0.0.1:5001/feedback", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        question,
+        answer,
+        feedback_type: feedbackType
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+  } catch (error) {
+    console.error("Error sending feedback:", error);
+  }
+}
 
 interface Message {
   id: string;
   text: string;
   sender: 'user' | 'bot';
-  type?: 'confirmation' | 'normal';
+  type?: 'confirmation' | 'normal' | 'clarification' | 'thank_you';
+  feedbackRequested?: boolean;
 }
 
 const QuickQueries = [
@@ -21,16 +60,6 @@ const QuickQueries = [
   "Infrastructure"
 ];
 
-// Simulated backend responses
-const mockResponses: Record<string, string> = {
-  "Admission Process": "The admission process at MUJ CSE involves: 1. JEE Mains score consideration 2. Online application 3. Merit list declaration 4. Counseling rounds. Would you like more specific details about any of these steps?",
-  "Fee Structure": "The annual fee structure for B.Tech CSE program is approximately ₹3.25 lakhs per year. This includes tuition fees, development fees, and other charges. Would you like a detailed breakdown?",
-  "Course Duration": "The B.Tech CSE program at MUJ is a 4-year undergraduate course spread across 8 semesters. Each semester includes core subjects, electives, and practical labs.",
-  "Placement Statistics": "For the 2023 batch, CSE department achieved: 1. 95% placement rate 2. Average package of 8.5 LPA 3. Highest package of 45 LPA 4. Top recruiters include Microsoft, Amazon, and Google.",
-  "Faculty Information": "The CSE department has over 100 faculty members, including: 1. 40+ PhD holders 2. Industry experts 3. Research scholars. Would you like to know about specific faculty members or areas of expertise?",
-  "Infrastructure": "MUJ CSE department features: 1. Modern computer labs 2. Research centers 3. Innovation hub 4. 24/7 internet facility 5. Specialized labs for AI, IoT, and Cybersecurity."
-};
-
 export default function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -38,49 +67,89 @@ export default function ChatWindow() {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-  
-    const newMessage: Message = {
+
+    // Check if input is a contact query
+    const contactQueryMatch = input.trim().toLowerCase().match(/(?:contact|email|phone|details)\s+of\s+(.+)/);
+    if (contactQueryMatch) {
+      const name = contactQueryMatch[1].trim();
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        text: input,
+        sender: 'user',
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setInput('');
+      setIsLoading(true);
+
+      try {
+        const { response, confidence } = await sendMessageToChatbot(input);
+        const botResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: confidence > 0.6 ? response : `Currently no contact exists for ${name}`,
+          sender: 'bot',
+          feedbackRequested: confidence > 0.6
+        };
+        setMessages((prev) => [...prev, botResponse]);
+      } catch (error) {
+        console.error("Error communicating with the chatbot:", error);
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "Sorry, something went wrong. Please try again later.",
+          sender: 'bot',
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Add user's message first
+    const userMessage: Message = {
       id: Date.now().toString(),
       text: input,
-      sender: 'user'
+      sender: 'user',
     };
-  
-    setMessages(prev => [...prev, newMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-  
-    // Check if user input matches any predefined responses
-    const lowerInput = input.toLowerCase();
-    const tempResponses: Record<string, string> = {
-      "programs offer": "1. B. Tech (Computer Science & Engineering)\n 2. M. Tech (Computer Science & Engineering)",
-      "eligibility criteria for admission": "1. MET 2024 Rank Holders:\n The candidate must have passed 10+2 or A Level or IB or American 12th grade or equivalent examination with Physics, Mathematics and English as Compulsory subjects, along with any one of Chemistry or Computer Science or Biotechnology or Biology or Statistics or Engineering Drawing as optional subject for admission to B Tech, with minimum of 50% marks in Physics, Mathematics and the optional subject, put together.\n2. Direct admission:\nDirect admission is possible if seats are available after MET.\nCandidates need to meet one of the following criteria:\n-Candidates have a JEE rank and qualified for JEE Advanced in that year\n-Based on candidate's SAT score\n-MET 2024 rank holders, who could not come for counseling.\n-All Students with Physics, Mathematics and English as compulsory subjects and who have 60% or equivalent in PMX subjects in their 12th std. where X could be Chemistry, Computers Science, Biotechnology, Biology, Statistics or Engineering Drawing.",
-      "duration of m.tech": "The M.Tech program at MUJ has a duration of 2 years (4 semesters)."
-    };
-  
-    let botResponseText = "I'm not sure about that. Did you mean to ask about the admission process?";
-    let responseType: 'confirmation' | 'normal' = 'confirmation'; // Default to confirmation
-  
-    for (const key in tempResponses) {
-      if (lowerInput.includes(key)) {
-        botResponseText = tempResponses[key];
-        responseType = 'normal'; // Set as normal to avoid showing confirmation buttons
-        break;
+
+    try {
+      const { response, confidence } = await sendMessageToChatbot(input);
+
+      // If confidence is 0.0 and response contains "contact information", it's a name query
+      if (confidence === 0.0 && response.includes("contact information")) {
+        const clarificationMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: response,
+          sender: 'bot',
+          type: 'clarification'
+        };
+        setMessages((prev) => [...prev, clarificationMessage]);
+      } else {
+        // Regular response
+        const botResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: response,
+          sender: 'bot',
+          feedbackRequested: confidence > 0.6
+        };
+        setMessages((prev) => [...prev, botResponse]);
       }
-    }
-  
-    setTimeout(() => {
-      const botResponse: Message = {
+    } catch (error) {
+      console.error("Error communicating with the chatbot:", error);
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: botResponseText,
+        text: "Sorry, something went wrong. Please try again later.",
         sender: 'bot',
-        type: responseType
       };
-      setMessages(prev => [...prev, botResponse]);
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const handleQuickQuery = (query: string) => {
+  const handleQuickQuery = async (query: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       text: query,
@@ -90,16 +159,27 @@ export default function ChatWindow() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Simulate API response with mock data
-    setTimeout(() => {
+    try {
+      const { response, confidence } = await sendMessageToChatbot(query);
+      
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: mockResponses[query] || "I'll get that information for you shortly.",
-        sender: 'bot'
+        text: response,
+        sender: 'bot',
+        feedbackRequested: confidence > 0.6
       };
       setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      console.error("Error communicating with the chatbot:", error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Sorry, something went wrong. Please try again later.",
+        sender: 'bot'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleConfirmation = (response: 'yes' | 'no') => {
@@ -112,18 +192,90 @@ export default function ChatWindow() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
+    // Get the name from the previous bot message
+    const previousBotMessage = messages[messages.length - 1];
+    const nameMatch = previousBotMessage.text.match(/for\s+([^?]+)\?/);
+    const name = nameMatch ? nameMatch[1].trim() : '';
+
     // Simulate API response based on confirmation
-    setTimeout(() => {
-      const botResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: response === 'yes' 
-          ? mockResponses["Admission Process"]
-          : "I apologize for the confusion. Could you please rephrase your question?",
-        sender: 'bot'
-      };
-      setMessages(prev => [...prev, botResponse]);
+    setTimeout(async () => {
+      if (response === 'yes' && name) {
+        // If user confirmed they want contact info, send the actual query
+        const { response: contactResponse, confidence } = await sendMessageToChatbot(`contact of ${name}`);
+        
+        // Show the contact information
+        const botResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: contactResponse,
+          sender: 'bot',
+          feedbackRequested: confidence > 0.6
+        };
+        setMessages(prev => [...prev, botResponse]);
+      } else {
+        const botResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "I apologize for the confusion. Could you please specify what information you're looking for about this person?",
+          sender: 'bot'
+        };
+        setMessages(prev => [...prev, botResponse]);
+      }
       setIsLoading(false);
     }, 1000);
+  };
+
+  const handleFeedback = async (response: 'yes' | 'no', questionMsg: Message, answerMsg: Message) => {
+    if (response === 'no') {
+      try {
+        const response = await fetch('/api/updateExcel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+          body: JSON.stringify({
+            question: questionMsg.text,
+            answer: answerMsg.text,
+            timestamp: new Date().toISOString() // Add timestamp to prevent caching
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save feedback');
+        }
+      } catch (error) {
+        console.error('Error saving feedback:', error);
+      }
+    }
+
+    if (response === 'yes') {
+      const thankYouMessage: Message = {
+        id: Date.now().toString(),
+        text: "Thank you for your contribution! What else can I help you with?",
+        sender: 'bot',
+        type: 'thank_you'  // Add this type
+      };
+      setMessages((prev) => [...prev, thankYouMessage]);
+    } else if (response === 'no') {
+      // Send the actual question and answer texts
+      await sendFeedback(questionMsg.text, answerMsg.text, "doubtful");
+
+      // Log for debugging
+      console.log('Feedback sent:', {
+        question: questionMsg.text,
+        answer: answerMsg.text,
+        type: 'doubtful'
+      });
+
+      const feedbackMessage: Message = {
+        id: Date.now().toString(),
+        text: "Your feedback has been recorded. Thank you for helping us improve!",
+        sender: 'bot',
+        type: 'thank_you'  // Add this type
+      };
+      setMessages((prev) => [...prev, feedbackMessage]);
+    }
   };
 
   return (
@@ -166,7 +318,7 @@ export default function ChatWindow() {
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
+        {messages.map((message, index) => (
           <motion.div
             key={message.id}
             initial={{ opacity: 0, y: 10 }}
@@ -184,16 +336,48 @@ export default function ChatWindow() {
               {message.type === 'confirmation' && (
                 <div className="mt-2 flex gap-2">
                   <button
-                    onClick={() => handleConfirmation('yes')}
+                    onClick={() => handleFeedback('yes', messages[messages.length - 2], message)}
                     className="bg-green-500 text-white px-3 py-1 rounded-full text-sm"
                   >
                     Yes
                   </button>
                   <button
-                    onClick={() => handleConfirmation('no')}
+                    onClick={() => handleFeedback('no', messages[messages.length - 2], message)}
                     className="bg-red-500 text-white px-3 py-1 rounded-full text-sm"
                   >
                     No
+                  </button>
+                </div>
+              )}
+              {message.type === 'clarification' && (
+                <div className="mt-2 space-x-2">
+                  <button
+                    onClick={() => handleConfirmation('yes')}
+                    className="text-sm text-gray-500 hover:text-green-500"
+                  >
+                    👍 Yes
+                  </button>
+                  <button
+                    onClick={() => handleConfirmation('no')}
+                    className="text-sm text-gray-500 hover:text-red-500"
+                  >
+                    👎 No
+                  </button>
+                </div>
+              )}
+              {message.sender === 'bot' && !message.type && (  // Only show for bot messages that aren't special types
+                <div className="mt-2 space-x-2">
+                  <button
+                    onClick={() => handleFeedback('yes', messages[index - 1], message)}
+                    className="text-sm text-gray-500 hover:text-green-500"
+                  >
+                    👍 Helpful
+                  </button>
+                  <button
+                    onClick={() => handleFeedback('no', messages[index - 1], message)}
+                    className="text-sm text-gray-500 hover:text-red-500"
+                  >
+                    👎 Not Helpful
                   </button>
                 </div>
               )}
